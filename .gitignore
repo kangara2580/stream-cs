@@ -4,12 +4,16 @@
 .LSOverride
 ._*
 
-# Node (Next.js 마이그레이션 시)
+# Node / Next.js
 node_modules/
 .next/
+*.tsbuildinfo
 out/
 dist/
 build/
+
+# Supabase 키 (로컬 전용)
+public/supabase-config.js
 
 # 환경변수 (절대 커밋 금지!)
 .env

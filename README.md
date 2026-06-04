@@ -7,22 +7,42 @@
 ## 📁 프로젝트 구조
 
 ```
-StreamContent-Server/
-├── index.html          ← 전체 서비스 단일 페이지 (랜딩+로그인+대시보드+오버레이+참여)
-├── README.md           ← 이 파일
-├── .gitignore
-└── (추후 Next.js 마이그레이션 시 추가 예정)
-    ├── app/
-    ├── components/
-    ├── lib/
-    └── supabase/
+stream-cs/
+├── public/
+│   └── index.html      ← UI/UX 프로토타입 (랜딩·로그인·대시보드·오버레이·참여)
+├── app/
+│   └── layout.tsx      ← Next.js 앱 셸 (루트는 index.html로 연결)
+├── middleware.ts       ← `/` → `/index.html` 리라이트
+├── package.json
+└── README.md
 ```
+
+---
+
+## 🚀 로컬 개발
+
+```bash
+cd /Users/gang-ahra/stream-cs
+npm run dev
+```
+
+브라우저: **http://localhost:3000** (또는 터미널에 표시된 포트)
+
+UI 수정은 **`public/index.html`** 하나만 편집하면 됩니다. 저장 후 브라우저 새로고침.
+
+### Supabase 백엔드 연동
+
+1. [docs/SUPABASE_연동가이드.md](docs/SUPABASE_연동가이드.md) 순서대로 진행
+2. `supabase/schema.sql` → Supabase SQL Editor에서 실행
+3. `public/supabase-config.example.js` → `public/supabase-config.js` 복사 후 URL·anon key 입력
+
+키 없이도 **데모 모드**로 UI는 동작합니다 (가입/로그인은 흉내, DB 저장 없음).
 
 ---
 
 ## 🚀 현재 단계: HTML 프로토타입 (MVP UI)
 
-`index.html` 하나에 5개 페이지가 모두 담겨 있어:
+`public/index.html` 하나에 5개 페이지가 모두 담겨 있어:
 - **랜딩 페이지** — 마케팅, 요금제, 수익 계산기
 - **로그인/회원가입** — 이메일 + 카카오/구글 소셜 로그인 UI
 - **대시보드** — 오버레이 관리, OBS URL 복사, 활동 피드
