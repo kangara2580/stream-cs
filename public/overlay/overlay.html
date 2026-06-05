@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamCS Overlay</title>
+<style>
+/* ── 기본: OBS 브라우저 소스용 (투명 배경) ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 1920px; height: 1080px;
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+}
+
+/* ── 씬 컨테이너 ── */
+.scene { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .4s; }
+.scene.active { opacity: 1; pointer-events: auto; }
+
+/* ── 공통 카드 ── */
+.card {
+  background: rgba(10, 10, 10, 0.88);
+  border: 2px solid rgba(255,214,0,0.6);
+  border-radius: 20px;
+  padding: 24px 28px;
+  color: #fff;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+
+/* ── 게임 이름 헤더 ── */
+.game-header {
+  position: absolute;
+  top: 30px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(0,0,0,0.75);
+  border: 2px solid #FFD600;
+  border-radius: 50px;
+  padding: 10px 28px;
+  font-size: 22px; font-weight: 700;
+  color: #FFD600;
+  white-space: nowrap;
+}
+
+/* ── 타이머 ── */
+.timer-display {
+  position: absolute;
+  top: 30px; right: 40px;
+  font-size: 52px; font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255,214,0,0.8), 0 2px 8px rgba(0,0,0,0.9);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -2px;
+}
+.timer-display.warning { color: #FF5252; animation: pulse 1s infinite; }
+
+/* ── 점수 ── */
+.score-display {
+  position: absolute;
+  bottom: 40px; right: 40px;
+  text-align: right;
+}
+.score-label { font-size: 16px; color: rgba(255,255,255,0.6); margin-bottom: 2px; }
+.score-value { font-size: 64px; font-weight: 900; color: #FFD600;
+  text-shadow: 0 2px 12px rgba(255,214,0,0.5); line-height: 1; }
+
+/* ── 참여자 리스트 ── */
+.participants-list {
+  position: absolute;
+  left: 40px; top: 100px;
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 800px; overflow: hidden;
+}
+.participant-item {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(0,0,0,0.7);
+  border-left: 4px solid #FFD600;
+  padding: 8px 16px;
+  border-radius: 0 10px 10px 0;
+  font-size: 18px; font-weight: 600;
+  animation: slideIn .3s ease;
+}
+.participant-rank {
+  font-size: 14px; color: rgba(255,255,255,0.5); min-width: 30px;
+}
+
+/* ── 채팅 피드 ── */
+.chat-feed {
+  position: absolute;
+  bottom: 40px; left: 40px;
+  display: flex; flex-direction: column; gap: 6px;
+  max-width: 500px;
+}
+.chat-item {
+  background: rgba(0,0,0,0.75);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 16px;
+  animation: fadeUp .3s ease;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chat-user { font-weight: 700; margin-right: 6px; }
+
+/* ── 알림 토스트 ── */
+#toast-container {
+  position: absolute;
+  top: 110px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 10px;
+  z-index: 9999;
+  pointer-events: none;
+}
+.toast {
+  background: rgba(0,0,0,0.9);
+  border: 2px solid #FFD600;
+  border-radius: 50px;
+  padding: 12px 32px;
+  font-size: 22px; font-weight: 700;
+  color: #fff;
+  animation: toastIn .4s cubic-bezier(.175,.885,.32,1.275);
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+.toast.error { border-color: #FF5252; color: #FF5252; }
+.toast.success { border-color: #69F0AE; color: #69F0AE; }
+
+/* ── 369 게임 씬 ── */
+#scene-369 .counter-wrap {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+#scene-369 .count-num {
+  font-size: 180px; font-weight: 900;
+  color: #FFD600;
+  text-shadow: 0 0 60px rgba(255,214,0,0.6), 0 4px 20px rgba(0,0,0,0.8);
+  line-height: 1; font-variant-numeric: tabular-nums;
+  transition: all .15s;
+}
+#scene-369 .count-num.clap {
+  color: #FF6B9D;
+  animation: clapPop .4s cubic-bezier(.175,.885,.32,1.275);
+}
+#scene-369 .last-user {
+  font-size: 24px; color: rgba(255,255,255,0.7);
+  margin-top: 12px;
+}
+
+/* ── 투표 (OX/밸런스) ── */
+.vote-bars {
+  position: absolute;
+  bottom: 60px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 20px;
+  width: 800px;
+}
+.vote-bar-item { flex: 1; text-align: center; }
+.vote-bar-label { font-size: 64px; font-weight: 900; margin-bottom: 10px; }
+.vote-bar-track {
+  height: 20px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px; overflow: hidden;
+}
+.vote-bar-fill { height: 100%; border-radius: 10px; transition: width .5s ease; }
+.vote-bar-count { font-size: 28px; font-weight: 700; margin-top: 8px; }
+.vote-O .vote-bar-label { color: #69F0AE; }
+.vote-O .vote-bar-fill { background: #69F0AE; }
+.vote-X .vote-bar-label { color: #FF5252; }
+.vote-X .vote-bar-fill { background: #FF5252; }
+.vote-A .vote-bar-label { color: #FFD600; }
+.vote-A .vote-bar-fill { background: #FFD600; }
+.vote-B .vote-bar-label { color: #42A5F5; }
+.vote-B .vote-bar-fill { background: #42A5F5; }
+
+/* ── 끝말잇기 ── */
+#scene-wordchain .word-display {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+#scene-wordchain .current-word {
+  font-size: 96px; font-weight: 900;
+  color: #FFD600;
+  text-shadow: 0 0 40px rgba(255,214,0,0.5), 0 3px 16px rgba(0,0,0,0.8);
+}
+#scene-wordchain .next-hint {
+  font-size: 32px; color: rgba(255,255,255,0.6);
+  margin-top: 16px;
+}
+#scene-wordchain .word-user {
+  font-size: 24px; color: rgba(255,255,255,0.8);
+  margin-top: 8px;
+}
+
+/* ── 초성 퀴즈 ── */
+#scene-initial .initial-display {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+#scene-initial .initial-chars {
+  font-size: 120px; font-weight: 900;
+  color: #FFD600; letter-spacing: 20px;
+  text-shadow: 0 0 50px rgba(255,214,0,0.6);
+}
+#scene-initial .initial-hint {
+  font-size: 24px; color: rgba(255,255,255,0.5);
+  margin-top: 12px;
+}
+
+/* ── 사다리 결과 ── */
+#scene-ladder .ladder-result {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+#scene-ladder .result-user {
+  font-size: 32px; color: rgba(255,255,255,0.7);
+  margin-bottom: 16px;
+}
+#scene-ladder .result-value {
+  font-size: 80px; font-weight: 900;
+  color: #FFD600;
+  text-shadow: 0 0 40px rgba(255,214,0,0.6);
+}
+
+/* ── 출석 랭킹 ── */
+#scene-checkin .ranking-list {
+  position: absolute;
+  top: 100px; left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.rank-item {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 20px;
+  background: rgba(0,0,0,0.75);
+  border-radius: 14px;
+  font-size: 22px; font-weight: 700;
+  animation: slideIn .3s ease;
+}
+.rank-badge {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 900;
+  flex-shrink: 0;
+}
+.rank-badge.r1 { background: #FFD600; color: #000; }
+.rank-badge.r2 { background: #C0C0C0; color: #000; }
+.rank-badge.r3 { background: #CD7F32; color: #000; }
+.rank-badge.rn { background: rgba(255,255,255,0.15); color: #fff; }
+.rank-time { font-size: 16px; color: rgba(255,255,255,0.4); margin-left: auto; }
+
+/* ── 음식 먹기 / 파리잡기 공통 ── */
+.game-canvas-wrap {
+  position: absolute;
+  inset: 0;
+}
+.game-canvas-wrap canvas {
+  width: 100%; height: 100%;
+}
+.hud-top {
+  position: absolute;
+  top: 30px; left: 40px;
+  display: flex; gap: 20px; align-items: center;
+}
+.hud-badge {
+  padding: 8px 20px;
+  background: rgba(0,0,0,0.8);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 50px;
+  font-size: 18px; font-weight: 700;
+}
+.combo-display {
+  position: absolute;
+  top: 50%; right: 60px;
+  transform: translateY(-50%);
+  text-align: center;
+  opacity: 0; transition: opacity .3s;
+}
+.combo-display.show { opacity: 1; }
+.combo-num { font-size: 80px; font-weight: 900; color: #FF6B9D; line-height: 1; }
+.combo-label { font-size: 24px; color: rgba(255,255,255,0.7); }
+
+/* ── 빙고 ── */
+#scene-bingo .bingo-board {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.bingo-cell {
+  width: 100px; height: 100px;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 700;
+  transition: all .3s;
+}
+.bingo-cell.called {
+  background: rgba(255,214,0,0.3);
+  border-color: #FFD600;
+  color: #FFD600;
+}
+
+/* ── 대기 화면 ── */
+#scene-idle {
+  display: flex; align-items: center; justify-content: center;
+}
+#scene-idle .idle-logo {
+  font-size: 48px; font-weight: 900;
+  color: rgba(255,255,255,0.1);
+  letter-spacing: 4px;
+}
+
+/* ── 애니메이션 ── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: scale(0.8) translateY(-20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes clapPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+@keyframes wrongShake {
+  0%, 100% { transform: translateX(-50%); }
+  20%, 60% { transform: translateX(calc(-50% - 12px)); }
+  40%, 80% { transform: translateX(calc(-50% + 12px)); }
+}
+@keyframes confetti {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(1200px) rotate(720deg); opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- 토스트 알림 -->
+<div id="toast-container"></div>
+
+<!-- ── 씬: 대기 ── -->
+<div id="scene-idle" class="scene active">
+  <div class="idle-logo">STREAMCS</div>
+</div>
+
+<!-- ── 씬: 369 게임 ── -->
+<div id="scene-369" class="scene">
+  <div class="game-header">🎲 369 게임</div>
+  <div class="timer-display" id="timer-369">--</div>
+  <div class="counter-wrap">
+    <div class="count-num" id="count-369">1</div>
+    <div class="last-user" id="lastuser-369"></div>
+  </div>
+  <div class="chat-feed" id="chat-369"></div>
+</div>
+
+<!-- ── 씬: OX 퀴즈 ── -->
+<div id="scene-quiz" class="scene">
+  <div class="game-header">✅ OX 퀴즈</div>
+  <div class="timer-display" id="timer-quiz">--</div>
+  <div style="position:absolute;top:130px;left:50%;transform:translateX(-50%);text-align:center;width:900px">
+    <div id="quiz-question" style="font-size:36px;font-weight:700;color:#fff;line-height:1.4;margin-bottom:20px;"></div>
+  </div>
+  <div class="vote-bars" id="vote-bars-quiz">
+    <div class="vote-bar-item vote-O">
+      <div class="vote-bar-label">O</div>
+      <div class="vote-bar-track"><div class="vote-bar-fill" id="bar-O" style="width:50%"></div></div>
+      <div class="vote-bar-count" id="count-O">0명</div>
+    </div>
+    <div class="vote-bar-item vote-X">
+      <div class="vote-bar-label">X</div>
+      <div class="vote-bar-track"><div class="vote-bar-fill" id="bar-X" style="width:50%"></div></div>
+      <div class="vote-bar-count" id="count-X">0명</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 씬: 끝말잇기 ── -->
+<div id="scene-wordchain" class="scene">
+  <div class="game-header">💬 끝말잇기</div>
+  <div class="timer-display" id="timer-wordchain">--</div>
+  <div class="word-display">
+    <div class="current-word" id="word-current">?</div>
+    <div class="next-hint" id="word-next-hint">다음 글자: ?</div>
+    <div class="word-user" id="word-user"></div>
+  </div>
+  <div class="participants-list" id="list-wordchain"></div>
+</div>
+
+<!-- ── 씬: 초성 퀴즈 ── -->
+<div id="scene-initial" class="scene">
+  <div class="game-header">🔤 초성 퀴즈</div>
+  <div class="timer-display" id="timer-initial">--</div>
+  <div class="initial-display">
+    <div class="initial-chars" id="initial-chars">?</div>
+    <div class="initial-hint" id="initial-hint">채팅으로 정답을 입력하세요!</div>
+  </div>
+  <div class="chat-feed" id="chat-initial"></div>
+</div>
+
+<!-- ── 씬: 밸런스 게임 ── -->
+<div id="scene-ai-balance" class="scene">
+  <div class="game-header">⚖️ AI 밸런스 게임</div>
+  <div class="timer-display" id="timer-balance">--</div>
+  <div style="position:absolute;top:120px;left:50%;transform:translateX(-50%);text-align:center;width:1000px">
+    <div id="balance-question" style="font-size:34px;font-weight:700;color:#fff;line-height:1.4;margin-bottom:24px;"></div>
+  </div>
+  <div class="vote-bars" id="vote-bars-balance">
+    <div class="vote-bar-item vote-A">
+      <div class="vote-bar-label" id="label-A">A</div>
+      <div class="vote-bar-track"><div class="vote-bar-fill" id="bar-A" style="width:50%"></div></div>
+      <div class="vote-bar-count" id="count-A-balance">0명</div>
+    </div>
+    <div class="vote-bar-item vote-B">
+      <div class="vote-bar-label" id="label-B">B</div>
+      <div class="vote-bar-track"><div class="vote-bar-fill" id="bar-B" style="width:50%"></div></div>
+      <div class="vote-bar-count" id="count-B-balance">0명</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 씬: 출석체크 랭킹 ── -->
+<div id="scene-checkin" class="scene">
+  <div class="game-header">📋 출석체크 랭킹</div>
+  <div class="ranking-list" id="ranking-checkin"></div>
+</div>
+
+<!-- ── 씬: 사다리 타기 결과 ── -->
+<div id="scene-ladder" class="scene">
+  <div class="game-header">🎰 사다리 타기</div>
+  <div class="ladder-result">
+    <div class="result-user" id="ladder-result-user"></div>
+    <div class="result-value" id="ladder-result-value"></div>
+  </div>
+</div>
+
+<!-- ── 씬: 음식 먹기 (얼굴 인식) ── -->
+<div id="scene-food" class="scene">
+  <div class="game-header">😋 음식 먹기 게임</div>
+  <div class="timer-display" id="timer-food">--</div>
+  <div class="game-canvas-wrap">
+    <canvas id="canvas-food"></canvas>
+  </div>
+  <div class="score-display">
+    <div class="score-label">점수</div>
+    <div class="score-value" id="score-food">0</div>
+  </div>
+  <div class="combo-display" id="combo-food">
+    <div class="combo-num" id="combo-num-food">0</div>
+    <div class="combo-label">COMBO</div>
+  </div>
+</div>
+
+<!-- ── 씬: 면 빨리 먹기 (얼굴 인식) ── -->
+<div id="scene-noodle" class="scene">
+  <div class="game-header">🍜 면 빨리 먹기</div>
+  <div class="timer-display" id="timer-noodle">--</div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+    <div id="noodle-chew" style="font-size:120px;font-weight:900;color:#FFD600;text-shadow:0 0 40px rgba(255,214,0,0.5);">0</div>
+    <div style="font-size:28px;color:rgba(255,255,255,0.6);margin-top:8px;">씹기 횟수</div>
+    <div id="noodle-speed" style="font-size:36px;font-weight:700;color:#fff;margin-top:16px;">속도: 0회/분</div>
+  </div>
+</div>
+
+<!-- ── 씬: 파리잡기 ── -->
+<div id="scene-flyswat" class="scene">
+  <div class="game-header">🪰 파리잡기 게임</div>
+  <div class="timer-display" id="timer-flyswat">--</div>
+  <div class="game-canvas-wrap">
+    <canvas id="canvas-flyswat"></canvas>
+  </div>
+  <div class="score-display">
+    <div class="score-label">잡은 마리</div>
+    <div class="score-value" id="score-flyswat">0</div>
+  </div>
+</div>
+
+<!-- ── 씬: 빙고 ── -->
+<div id="scene-bingo" class="scene">
+  <div class="game-header">🎯 빙고 게임</div>
+  <div class="bingo-board" id="bingo-board"></div>
+</div>
+
+<!-- ── 씬: 행운의 룰렛 (결과) ── -->
+<div id="scene-spin" class="scene">
+  <div class="game-header">🎡 행운의 룰렛</div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+    <div id="spin-result-label" style="font-size:28px;color:rgba(255,255,255,0.6);margin-bottom:12px;">당첨 결과</div>
+    <div id="spin-result-value" style="font-size:80px;font-weight:900;color:#FFD600;text-shadow:0 0 40px rgba(255,214,0,0.5);"></div>
+  </div>
+  <div class="participants-list" id="list-spin"></div>
+</div>
+
+<!-- ── 씬: 폭탄 룰렛 (참여자) ── -->
+<div id="scene-bomb" class="scene">
+  <div class="game-header">💣 폭탄 룰렛</div>
+  <div class="participants-list" id="list-bomb"></div>
+</div>
+
+<!-- ── 씬: 구슬 게임 ── -->
+<div id="scene-marble" class="scene">
+  <div class="game-header">🔮 구슬 게임</div>
+  <div class="participants-list" id="list-marble"></div>
+</div>
+
+<!-- ── 씬: 운세 뽑기 ── -->
+<div id="scene-fortune" class="scene">
+  <div class="game-header">🔮 운세 뽑기</div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+    <div id="fortune-result" style="font-size:72px;font-weight:900;color:#FFD600;"></div>
+    <div id="fortune-user" style="font-size:28px;color:rgba(255,255,255,0.7);margin-top:16px;"></div>
+  </div>
+</div>
+
+<!-- ── 컨페티 컨테이너 ── -->
+<div id="confetti-container" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// WebSocket 연결 관리
+// ═══════════════════════════════════════════════════════
+
+// URL 파라미터에서 overlayKey와 서버 주소 추출
+const params = new URLSearchParams(location.search);
+const OVERLAY_KEY = params.get('key') || 'demo-key';
+const WS_URL = params.get('server') || 'ws://localhost:3001';
+
+let ws = null;
+let reconnectTimer = null;
+let currentScene = 'idle';
+
+function connectWS() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+
+  ws = new WebSocket(`${WS_URL}?key=${OVERLAY_KEY}&type=overlay`);
+
+  ws.onopen = () => {
+    console.log('[Overlay] WebSocket 연결됨');
+    clearTimeout(reconnectTimer);
+  };
+
+  ws.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    handleServerMessage(msg);
+  };
+
+  ws.onclose = () => {
+    console.log('[Overlay] 연결 끊김, 3초 후 재연결...');
+    reconnectTimer = setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => {};
+}
+
+function sendWS(data) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(data));
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 메시지 처리
+// ═══════════════════════════════════════════════════════
+
+function handleServerMessage(msg) {
+  const { type, payload, state } = msg;
+
+  switch (type) {
+    case 'INIT':
+    case 'STATE_UPDATE':
+      if (state) syncState(state);
+      break;
+
+    case 'GAME_START':
+      showScene(payload.gameId);
+      showToast(`🎮 ${payload.gameName} 시작!`);
+      break;
+
+    case 'GAME_STOP':
+      showToast('게임 종료');
+      setTimeout(() => showScene('idle'), 3000);
+      break;
+
+    case 'TIMER_UPDATE':
+      updateTimers(payload.timer);
+      break;
+
+    case 'TIMER_END':
+      showToast('⏰ 시간 종료!', 'warning');
+      break;
+
+    case 'GAME_EVENT':
+      handleGameEvent(payload);
+      break;
+
+    case 'GAME_RESULT':
+      handleGameResult(payload);
+      break;
+
+    case 'CHAT_MESSAGE':
+      addChatItem(payload);
+      break;
+
+    case 'SCENE_CHANGE':
+      if (payload?.scene) showScene(payload.scene);
+      break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 상태 동기화
+// ═══════════════════════════════════════════════════════
+
+function syncState(state) {
+  if (!state.active) { showScene('idle'); return; }
+
+  showScene(state.gameId);
+  updateTimers(state.timer);
+
+  switch (state.gameId) {
+    case '369':
+      updateEl('count-369', state._gameData?.current || 1);
+      break;
+    case 'quiz':
+      syncQuizState(state);
+      break;
+    case 'ai-balance':
+      syncBalanceState(state);
+      break;
+    case 'checkin':
+      syncCheckinState(state);
+      break;
+    case 'wordchain':
+      syncWordchainState(state);
+      break;
+    case 'bingo':
+      renderBingoBoard(state._gameData?.board, state._gameData?.called || []);
+      break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 씬 전환
+// ═══════════════════════════════════════════════════════
+
+function showScene(sceneId) {
+  if (currentScene === sceneId) return;
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  const next = document.getElementById(`scene-${sceneId}`);
+  if (next) {
+    next.classList.add('active');
+    currentScene = sceneId;
+  } else {
+    document.getElementById('scene-idle').classList.add('active');
+    currentScene = 'idle';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 게임별 이벤트 처리
+// ═══════════════════════════════════════════════════════
+
+function handleGameEvent(payload) {
+  const { event } = payload;
+
+  switch (event) {
+    // ── 369 ──
+    case '369_CORRECT':
+      updateEl('count-369', payload.current);
+      updateEl('lastuser-369', `✅ ${payload.user}`);
+      if (payload.wasClap) {
+        const el = document.getElementById('count-369');
+        el.textContent = '👏';
+        el.classList.add('clap');
+        setTimeout(() => { el.textContent = payload.current; el.classList.remove('clap'); }, 600);
+      }
+      addChatItem369(payload.user, payload.wasClap ? '👏 박수!' : payload.current - 1, true);
+      break;
+
+    case '369_WRONG':
+      const el = document.getElementById('count-369');
+      el.style.color = '#FF5252';
+      setTimeout(() => { el.style.color = ''; }, 800);
+      updateEl('count-369', 1);
+      showToast(`❌ ${payload.user} 탈락! (${payload.expected} 차례)`, 'error');
+      addChatItem369(payload.user, payload.got, false);
+      break;
+
+    // ── OX 퀴즈 ──
+    case 'QUIZ_VOTE':
+      updateVoteBars('O', 'X', payload.counts.O, payload.counts.X);
+      break;
+
+    // ── 밸런스 게임 ──
+    case 'BALANCE_VOTE':
+      updateVoteBars('A', 'B', payload.counts.A, payload.counts.B, true);
+      break;
+
+    // ── 끝말잇기 ──
+    case 'WORD_OK':
+      updateEl('word-current', payload.word);
+      updateEl('word-next-hint', `다음 글자: "${payload.nextChar}"`);
+      updateEl('word-user', `${payload.user} (${payload.score}점)`);
+      showToast(`✅ ${payload.user}: ${payload.word}`, 'success');
+      break;
+
+    case 'WORD_USED':
+      showToast(`⚠️ 이미 사용된 단어: ${payload.word}`, 'error');
+      break;
+
+    // ── 초성 퀴즈 ──
+    case 'INITIAL_CORRECT':
+      showToast(`🎉 ${payload.user} 정답! → ${payload.answer}`, 'success');
+      confetti();
+      break;
+
+    // ── 출석 체크 ──
+    case 'CHECKIN':
+      addCheckinItem(payload);
+      break;
+
+    // ── 음식 먹기 ──
+    case 'FOOD_EAT':
+      updateEl('score-food', payload.score);
+      updateCombo('food', payload.combo);
+      if (payload.combo >= 5) showToast(`🔥 ${payload.combo} COMBO!`, 'success');
+      break;
+
+    case 'FOOD_MISS':
+      updateCombo('food', 0);
+      break;
+
+    // ── 면 빨리 먹기 ──
+    case 'NOODLE_CHEW':
+      updateEl('noodle-chew', payload.chewCount);
+      updateEl('noodle-speed', `속도: ${payload.speed}회/분`);
+      break;
+
+    // ── 참여자 추가 (폭탄/구슬 등) ──
+    case 'PLAYER_JOIN':
+      addParticipantItem(currentScene.replace('scene-', ''), payload);
+      break;
+
+    // ── 빙고 숫자 호출 ──
+    case 'BINGO_CALL':
+      callBingoNumber(payload.number);
+      showToast(`🎯 ${payload.number} 호출!`);
+      break;
+  }
+}
+
+function handleGameResult(payload) {
+  // 사다리 타기 결과
+  if (currentScene === 'ladder') {
+    updateEl('ladder-result-user', payload.user || '');
+    updateEl('ladder-result-value', payload.result || '');
+    confetti();
+  }
+  // 룰렛 결과
+  if (currentScene === 'spin') {
+    updateEl('spin-result-value', payload.winner || payload.result || '');
+    confetti();
+  }
+  // 운세 뽑기
+  if (currentScene === 'fortune') {
+    updateEl('fortune-result', payload.fortune || '');
+    updateEl('fortune-user', payload.user || '');
+    confetti();
+  }
+  // 면 빨리 먹기 결과
+  if (currentScene === 'noodle') {
+    showToast(`🍜 완료! ${payload.chewCount}번 / ${payload.time}초`, 'success');
+    confetti();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// UI 업데이트 유틸
+// ═══════════════════════════════════════════════════════
+
+function updateEl(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+function updateTimers(timer) {
+  const t = typeof timer === 'number' ? timer : '--';
+  const str = typeof t === 'number'
+    ? `${Math.floor(t/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`
+    : '--';
+  document.querySelectorAll('[id^="timer-"]').forEach(el => {
+    el.textContent = str;
+    el.classList.toggle('warning', typeof t === 'number' && t <= 10);
+  });
+}
+
+function updateVoteBars(keyA, keyB, countA, countB, isBalance = false) {
+  const total = countA + countB || 1;
+  const pctA = Math.round(countA / total * 100);
+  const pctB = 100 - pctA;
+
+  if (isBalance) {
+    const barA = document.getElementById('bar-A');
+    const barB = document.getElementById('bar-B');
+    if (barA) barA.style.width = pctA + '%';
+    if (barB) barB.style.width = pctB + '%';
+    updateEl('count-A-balance', `${countA}명 (${pctA}%)`);
+    updateEl('count-B-balance', `${countB}명 (${pctB}%)`);
+  } else {
+    const barO = document.getElementById('bar-O');
+    const barX = document.getElementById('bar-X');
+    if (barO) barO.style.width = (keyA === 'O' ? pctA : pctB) + '%';
+    if (barX) barX.style.width = (keyB === 'X' ? pctB : pctA) + '%';
+    updateEl('count-O', `${countA}명 (${pctA}%)`);
+    updateEl('count-X', `${countB}명 (${pctB}%)`);
+  }
+}
+
+function addChatItem(msg) {
+  const feedId = `chat-${currentScene.replace('scene-','')}`;
+  const feed = document.getElementById(feedId) || document.getElementById('chat-369');
+  if (!feed) return;
+
+  const item = document.createElement('div');
+  item.className = 'chat-item';
+  item.innerHTML = `<span class="chat-user" style="color:${msg.color || '#FFD600'}">${escHtml(msg.user)}</span>${escHtml(msg.message)}`;
+  feed.appendChild(item);
+
+  // 최대 5개 유지
+  while (feed.children.length > 5) feed.removeChild(feed.firstChild);
+}
+
+function addChatItem369(user, value, correct) {
+  const feed = document.getElementById('chat-369');
+  if (!feed) return;
+  const item = document.createElement('div');
+  item.className = 'chat-item';
+  item.style.borderLeft = `3px solid ${correct ? '#69F0AE' : '#FF5252'}`;
+  item.innerHTML = `<span class="chat-user" style="color:#FFD600">${escHtml(user)}</span>${value}`;
+  feed.appendChild(item);
+  while (feed.children.length > 5) feed.removeChild(feed.firstChild);
+}
+
+function addCheckinItem(payload) {
+  const list = document.getElementById('ranking-checkin');
+  if (!list) return;
+  const rank = payload.rank;
+  const cls = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : 'rn';
+  const item = document.createElement('div');
+  item.className = 'rank-item';
+  item.innerHTML = `
+    <div class="rank-badge ${cls}">${rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : rank}</div>
+    <span style="color:${payload.color || '#fff'}">${escHtml(payload.user)}</span>
+    <span class="rank-time">${new Date(payload.checkinTime || Date.now()).toLocaleTimeString('ko')}</span>
+  `;
+  list.appendChild(item);
+  while (list.children.length > 8) list.removeChild(list.firstChild);
+}
+
+function addParticipantItem(gameId, payload) {
+  const list = document.getElementById(`list-${gameId}`);
+  if (!list) return;
+  const item = document.createElement('div');
+  item.className = 'participant-item';
+  item.innerHTML = `
+    <span class="participant-rank">${list.children.length + 1}</span>
+    <span style="color:${payload.color || '#fff'}">${escHtml(payload.name || payload.user)}</span>
+  `;
+  list.appendChild(item);
+  while (list.children.length > 12) list.removeChild(list.firstChild);
+}
+
+function updateCombo(gameId, combo) {
+  const el = document.getElementById(`combo-${gameId}`);
+  const numEl = document.getElementById(`combo-num-${gameId}`);
+  if (!el || !numEl) return;
+  numEl.textContent = combo;
+  el.classList.toggle('show', combo >= 3);
+}
+
+// ── 빙고 보드 ──
+function renderBingoBoard(board, called) {
+  const container = document.getElementById('bingo-board');
+  if (!container || !board) return;
+  container.innerHTML = '';
+  board.flat().forEach(num => {
+    const cell = document.createElement('div');
+    cell.className = 'bingo-cell' + (called.includes(num) ? ' called' : '');
+    cell.textContent = num;
+    cell.id = `bingo-${num}`;
+    container.appendChild(cell);
+  });
+}
+
+function callBingoNumber(num) {
+  const cell = document.getElementById(`bingo-${num}`);
+  if (cell) cell.classList.add('called');
+}
+
+// ── 상태 동기화 헬퍼 ──
+function syncQuizState(state) {
+  const gd = state._gameData || {};
+  updateEl('quiz-question', gd.question || '');
+  if (gd.votes) {
+    updateVoteBars('O', 'X', gd.votes.O?.length || 0, gd.votes.X?.length || 0);
+  }
+}
+
+function syncBalanceState(state) {
+  const gd = state._gameData || {};
+  updateEl('balance-question', gd.question || '');
+  if (gd.optionA) updateEl('label-A', gd.optionA);
+  if (gd.optionB) updateEl('label-B', gd.optionB);
+  if (gd.votes) {
+    updateVoteBars('A', 'B', gd.votes.A?.length || 0, gd.votes.B?.length || 0, true);
+  }
+}
+
+function syncCheckinState(state) {
+  const list = document.getElementById('ranking-checkin');
+  if (!list) return;
+  list.innerHTML = '';
+  state.participants.forEach((p, i) => {
+    addCheckinItem({ ...p, rank: i + 1 });
+  });
+}
+
+function syncWordchainState(state) {
+  const gd = state._gameData || {};
+  updateEl('word-current', gd.lastWord || '?');
+  updateEl('word-next-hint', gd.lastChar ? `다음 글자: "${gd.lastChar}"` : '시작 단어를 입력하세요');
+}
+
+// ═══════════════════════════════════════════════════════
+// 토스트 알림
+// ═══════════════════════════════════════════════════════
+
+function showToast(text, type = '') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = text;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity .5s';
+    setTimeout(() => toast.remove(), 500);
+  }, 2500);
+}
+
+// ═══════════════════════════════════════════════════════
+// 컨페티 이펙트
+// ═══════════════════════════════════════════════════════
+
+function confetti() {
+  const container = document.getElementById('confetti-container');
+  const colors = ['#FFD600','#FF6B9D','#69F0AE','#42A5F5','#FF5252','#FFFFFF'];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.style.cssText = `
+      position:absolute;
+      width:${6 + Math.random()*8}px;
+      height:${6 + Math.random()*8}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      border-radius:${Math.random()>0.5?'50%':'2px'};
+      left:${Math.random()*100}%;
+      top:-20px;
+      animation: confetti ${1.5 + Math.random()*2}s ease-in ${Math.random()*0.5}s forwards;
+      opacity:1;
+    `;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 보안 유틸
+// ═══════════════════════════════════════════════════════
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════════════════════
+// 시작
+// ═══════════════════════════════════════════════════════
+
+connectWS();
+</script>
+</body>
+</html>

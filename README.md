@@ -9,12 +9,17 @@
 ```
 stream-cs/
 ├── public/
-│   └── index.html      ← UI/UX 프로토타입 (랜딩·로그인·대시보드·오버레이·참여)
-├── app/
-│   └── layout.tsx      ← Next.js 앱 셸 (루트는 index.html로 연결)
-├── middleware.ts       ← `/` → `/index.html` 리라이트
-├── package.json
-└── README.md
+│   ├── index.html           ← 대시보드 + WebSocket 클라이언트
+│   ├── overlay/
+│   │   ├── overlay.html     ← OBS 메인 오버레이 (1920×1080)
+│   │   └── face-overlay.html← 얼굴 인식 오버레이 (음식/면 먹기)
+│   └── supabase-config.js   ← 로컬 전용 (gitignore)
+├── ws-server/               ← WebSocket + Twitch IRC 실시간 서버
+│   ├── server.js
+│   └── modules/
+├── app/layout.tsx
+├── middleware.ts            ← `/` → `/index.html` 리라이트
+└── package.json
 ```
 
 ---
@@ -28,7 +33,28 @@ npm run dev
 
 브라우저: **http://localhost:3000** (또는 터미널에 표시된 포트)
 
-UI 수정은 **`public/index.html`** 하나만 편집하면 됩니다. 저장 후 브라우저 새로고침.
+### 실시간 서버 (WebSocket + 채팅)
+
+```bash
+npm run ws:install   # 최초 1회
+cp ws-server/.env.example ws-server/.env   # SUPABASE_SERVICE_KEY 등 입력
+
+# 터미널 1 — 대시보드
+npm run dev
+
+# 터미널 2 — WebSocket 서버
+npm run ws:dev
+```
+
+**OBS 브라우저 소스 URL (로컬):**
+
+`http://localhost:3000/overlay/overlay.html?key=YOUR_KEY&server=ws://localhost:3001`
+
+대시보드 → 스트리머 설정 → 실시간 서버 연결에서 WS URL 저장 후 **OBS URL 복사** 버튼 사용.
+
+프로덕션: 대시보드는 Vercel, WebSocket 서버는 Railway/Render 등에 `ws-server` 배포.
+
+UI 수정은 **`public/index.html`** (대시보드) 또는 **`public/overlay/`** (OBS) 를 편집합니다.
 
 ### Supabase 백엔드 연동
 

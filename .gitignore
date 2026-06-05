@@ -18,6 +18,8 @@ public/supabase-config.js
 # 환경변수 (절대 커밋 금지!)
 .env
 .env.local
+ws-server/.env
+ws-server/node_modules/
 .env.development.local
 .env.test.local
 .env.production.local

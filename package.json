@@ -8,7 +8,10 @@
     "prebuild": "node scripts/generate-supabase-config.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "ws:install": "cd ws-server && npm install",
+    "ws:dev": "cd ws-server && npm run dev",
+    "ws:start": "cd ws-server && npm start"
   },
   "dependencies": {
     "next": "^15.3.3",

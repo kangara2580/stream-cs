@@ -1909,6 +1909,48 @@ input[type=range]::-webkit-slider-thumb{
       <button class="btn btn-line btn-sm" style="margin-top:14px;" onclick="if(confirm('오버레이 키를 재발급하면 기존 URL이 모두 무효화됩니다. 진행할까요?'))showToast('오버레이 키 재발급 완료!')">키 재발급</button>
     </div>
 
+    <!-- 실시간 서버 연결 설정 -->
+    <div style="background:var(--WH);border:2px solid var(--YL);border-radius:var(--r3);padding:28px;margin-bottom:20px;">
+      <h2 style="font-family:'Jua',sans-serif;font-size:18px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#F9A825" stroke-width="1.8" fill="none"/><circle cx="10" cy="10" r="3" fill="#F9A825"/><path d="M10 2 L10 5 M10 15 L10 18 M2 10 L5 10 M15 10 L18 10" stroke="#F9A825" stroke-width="1.5" stroke-linecap="round"/></svg>
+        실시간 서버 연결
+        <div id="ws-status" style="width:10px;height:10px;border-radius:50%;background:#FF5252;margin-left:4px;" title="서버 연결 끊김"></div>
+      </h2>
+      <p style="font-size:13px;color:var(--GR);margin-bottom:16px;">게임 실시간 연동을 위해 서버 주소를 입력하세요. Railway/Render에 배포한 서버 URL을 사용하세요.</p>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+        <input id="ss-ws-url" type="text" class="inp" style="flex:1;font-family:monospace;font-size:13px;" placeholder="ws://your-server.railway.app" value="ws://localhost:3001">
+        <button class="btn btn-Y btn-sm" onclick="saveWsUrl()">저장 및 연결</button>
+        <button class="btn btn-line btn-sm" onclick="testWsConnection()">연결 테스트</button>
+      </div>
+      <div style="background:var(--YL);border-radius:var(--r2);padding:12px 14px;font-size:12px;color:var(--GR);">
+        <b>OBS 브라우저 소스 URL 형식:</b><br>
+        <code style="font-size:11px;color:var(--YDD)">/overlay/overlay.html?key=<span id="obs-key-preview">abc123xyz</span>&server=wss://your-server.railway.app</code>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+          <button class="btn btn-line btn-sm" style="font-size:11px;" onclick="copyObsUrl()">메인 오버레이 URL 복사</button>
+          <button class="btn btn-line btn-sm" style="font-size:11px;" onclick="copyFaceObsUrl()">얼굴 인식 오버레이 URL 복사</button>
+        </div>
+      </div>
+      <!-- 채팅 연동 상태 -->
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--YL)">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;">채팅 연동 상태</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <select id="ss-chat-platform" class="inp" style="width:140px;">
+            <option value="twitch">트위치</option>
+            <option value="youtube">유튜브</option>
+            <option value="chzzk">치지직</option>
+          </select>
+          <input id="ss-chat-channel" type="text" class="inp" style="flex:1;" placeholder="채널명 (예: your_channel)">
+          <button class="btn btn-Y btn-sm" onclick="connectChat()">채팅 연결</button>
+          <button class="btn btn-line btn-sm" onclick="disconnectChat()">연결 해제</button>
+        </div>
+        <div id="chat-status" style="font-size:12px;color:var(--GR);margin-top:8px;">채팅 미연결</div>
+        <!-- 라이브 채팅 피드 미리보기 -->
+        <div id="live-chat-feed" style="margin-top:12px;background:var(--GL);border-radius:var(--r2);padding:12px;max-height:150px;overflow-y:auto;font-size:13px;">
+          <div style="color:var(--GR);text-align:center;padding:20px 0;">채팅 연결 후 여기에 표시됩니다</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 멀티 플랫폼 연동 -->
     <div style="background:var(--WH);border:2px solid var(--YL);border-radius:var(--r3);padding:28px;margin-bottom:20px;">
       <h2 style="font-family:'Jua',sans-serif;font-size:18px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">
@@ -2437,6 +2479,7 @@ function applyOverlayKeyToUI(key) {
   if(!key) return;
   const setText = (id)=>{ const e=document.getElementById(id); if(e) e.textContent=key; };
   setText('ss-key');
+  setText('obs-key-preview');
 }
 /* 게임 기록 저장 */
 async function sbSaveGameRecord(gameId, payload) {
@@ -2668,11 +2711,6 @@ function copyResMobile(card) {
   setTimeout(()=>{ card.classList.remove('copied'); card.querySelector('.obs-res-copy').textContent='클릭 → 복사'; }, 2000);
 }
 
-// 오버레이 고유 키 가져오기
-function getOverlayKey() {
-  return AppState.user?.overlay_key || 'abc123xyz';
-}
-
 /* ===== CALC (수익 계산기 - 현재 미사용, 안전 가드) ===== */
 function calcP() {
   const cntEl = document.getElementById('sl-cnt');
@@ -2732,6 +2770,11 @@ function applyUserToUI() {
   // 플랜 배지
   const planLabel = u.plan==='pro' ? 'Pro 구독 중' : u.plan==='starter' ? 'Starter 구독 중' : '미구독';
   set('db-uplan', planLabel);
+  // OBS 키 미리보기 업데이트
+  const obsKeyEl = document.getElementById('obs-key-preview');
+  if (obsKeyEl && u.overlayKey) obsKeyEl.textContent = u.overlayKey;
+  // 로그인 시 WebSocket 자동 연결
+  initWS();
 }
 
 function handleSocialLogin(provider) {
@@ -5059,6 +5102,122 @@ function renderViewerResultInputs() {
     </div>`).join('');
 }
 
+/* ===== WebSocket 클라이언트 (실시간 오버레이 연동) ===== */
+const WS = (() => {
+  let _ws = null;
+  let _reconnectTimer = null;
+  let _listeners = {};
+  // 서버 주소: 설정에서 변경 가능 (기본: 로컬)
+  let _url = localStorage.getItem('streamcs_ws_url') || 'ws://localhost:3001';
+
+  function connect() {
+    if (_ws && _ws.readyState === WebSocket.OPEN) return;
+    const key = getOverlayKey();
+    _ws = new WebSocket(`${_url}?key=${key}&type=dashboard`);
+    _ws.onopen = () => {
+      console.log('[WS] 연결됨');
+      clearTimeout(_reconnectTimer);
+      emit('connected');
+    };
+    _ws.onmessage = (e) => {
+      try { emit('message', JSON.parse(e.data)); } catch {}
+    };
+    _ws.onclose = () => {
+      emit('disconnected');
+      _reconnectTimer = setTimeout(connect, 4000);
+    };
+    _ws.onerror = () => {};
+  }
+
+  function send(data) {
+    if (_ws?.readyState === WebSocket.OPEN) {
+      _ws.send(JSON.stringify(data));
+      return true;
+    }
+    return false;
+  }
+
+  function on(event, cb) {
+    if (!_listeners[event]) _listeners[event] = [];
+    _listeners[event].push(cb);
+  }
+
+  function emit(event, data) {
+    (_listeners[event] || []).forEach(cb => cb(data));
+  }
+
+  function setUrl(url) {
+    _url = url;
+    localStorage.setItem('streamcs_ws_url', url);
+    if (_ws) { _ws.close(); }
+  }
+
+  function isConnected() { return _ws?.readyState === WebSocket.OPEN; }
+
+  return { connect, send, on, setUrl, isConnected };
+})();
+
+// WS 메시지 처리
+WS.on('message', (msg) => {
+  if (msg.type === 'TIMER_UPDATE') {
+    // 대시보드에서 타이머 표시 업데이트
+    const timerEl = document.getElementById('live-timer');
+    if (timerEl && typeof msg.payload?.timer === 'number') {
+      const t = msg.payload.timer;
+      timerEl.textContent = `${Math.floor(t/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`;
+    }
+  }
+  if (msg.type === 'CHAT_MESSAGE') {
+    // 라이브 채팅 피드 업데이트
+    const feed = document.getElementById('live-chat-feed');
+    if (feed) {
+      const item = document.createElement('div');
+      item.style.cssText = 'padding:4px 8px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.05);';
+      const color = msg.payload.color || '#FFD600';
+      item.innerHTML = `<span style="color:${color};font-weight:700">${escHtml(msg.payload.user)}</span> ${escHtml(msg.payload.message)}`;
+      feed.insertBefore(item, feed.firstChild);
+      while (feed.children.length > 30) feed.removeChild(feed.lastChild);
+    }
+  }
+  if (msg.type === 'CHAT_JOINED') {
+    const statusEl = document.getElementById('chat-status');
+    if (statusEl) statusEl.textContent = `✅ ${msg.payload.platform} #${msg.payload.channel} 연결됨`;
+    showToast(`채팅 연결 완료: #${msg.payload.channel}`);
+    const feedEl = document.getElementById('live-chat-feed');
+    if (feedEl) feedEl.innerHTML = '';
+  }
+  if (msg.type === 'CHAT_LEFT') {
+    const statusEl = document.getElementById('chat-status');
+    if (statusEl) statusEl.textContent = '채팅 미연결';
+  }
+  if (msg.type === 'GAME_EVENT') {
+    // 참여자 수 업데이트
+    if (msg.payload.event === 'PLAYER_JOIN' || msg.payload.event === 'CHECKIN') {
+      const countEl = document.getElementById('live-participant-count');
+      if (countEl) countEl.textContent = msg.payload.count || '';
+    }
+  }
+});
+
+WS.on('connected', () => {
+  const statusEl = document.getElementById('ws-status');
+  if (statusEl) { statusEl.style.background = '#69F0AE'; statusEl.title = '서버 연결됨'; }
+});
+
+WS.on('disconnected', () => {
+  const statusEl = document.getElementById('ws-status');
+  if (statusEl) { statusEl.style.background = '#FF5252'; statusEl.title = '서버 연결 끊김'; }
+});
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// 로그인 후 WS 자동 연결
+function initWS() {
+  if (AppState.isLoggedIn()) WS.connect();
+}
+
 function startGameLive(id, name) {
 /* text 입력칸이 비어 있으면 data-default(기본값)를 대신 사용 — 게임 시작 직전 호출 */
   document.querySelectorAll('#page-game-detail input[data-default]').forEach(el => {
@@ -5074,6 +5233,30 @@ function startGameLive(id, name) {
     setTimeout(()=>{ goPage('dashboard'); setTimeout(()=>dbTab('sub', document.querySelector('[onclick*="\'sub\'"]')), 300); }, 400);
     return;
   }
+
+  // 설정값 수집
+  const settings = {};
+  document.querySelectorAll('#page-game-detail [data-setting]').forEach(el => {
+    settings[el.dataset.setting] = el.value || el.dataset.value;
+  });
+  // 타이머 수집
+  const timerEl = document.querySelector('#page-game-detail [id^="gd-set-"]');
+  if (timerEl?.dataset?.timer) settings.timer = parseInt(timerEl.dataset.timer);
+
+  // WebSocket으로 게임 시작 명령 전송
+  const sent = WS.send({
+    type: 'GAME_START',
+    payload: { gameId: id, gameName: name, settings }
+  });
+
+  if (!sent) {
+    // WS 미연결 시 연결 시도
+    WS.connect();
+    setTimeout(() => {
+      WS.send({ type: 'GAME_START', payload: { gameId: id, gameName: name, settings } });
+    }, 1500);
+  }
+
   showToast(name + ' 시작! 방송 화면을 확인하세요 🎮');
   sbSaveGameRecord(id, { name, started_at: new Date().toISOString() });
 }
@@ -5090,6 +5273,8 @@ let platformRowCount = 0;
 async function renderStreamerSettings() {
   const list = document.getElementById('ss-platforms-list');
   if(!list || list.children.length > 0) return;
+  const wsInp = document.getElementById('ss-ws-url');
+  if (wsInp) wsInp.value = localStorage.getItem('streamcs_ws_url') || 'ws://localhost:3001';
   addPlatformRow();
   if(AppState.user) {
     const ch = document.getElementById('ss-channel');
@@ -5132,10 +5317,72 @@ function addPlatformRow() {
     <button style="background:none;border:none;cursor:pointer;color:#ccc;font-size:20px;flex-shrink:0;" onclick="this.parentElement.remove()">✕</button>`;
   list.appendChild(row);
 }
+function normalizeWsUrlForOverlay(url) {
+  const u = (url || '').trim();
+  if (!u) return 'ws://localhost:3001';
+  if (u.startsWith('ws://localhost') || u.startsWith('ws://127.')) return u;
+  if (u.startsWith('ws://')) return 'wss://' + u.slice(5);
+  return u;
+}
+
+function buildOverlayUrl(kind) {
+  const key = getOverlayKey();
+  const wsUrl = document.getElementById('ss-ws-url')?.value?.trim()
+    || localStorage.getItem('streamcs_ws_url')
+    || 'ws://localhost:3001';
+  const server = encodeURIComponent(normalizeWsUrlForOverlay(wsUrl));
+  const file = kind === 'face' ? 'face-overlay.html' : 'overlay.html';
+  return `${location.origin}/overlay/${file}?key=${encodeURIComponent(key)}&server=${server}`;
+}
+
 function copyOverlayKey() {
-  const key = document.getElementById('ss-key')?.textContent || 'abc123xyz';
-  navigator.clipboard.writeText('https://streamcs.io/overlay/'+key).catch(()=>{});
-  showToast('오버레이 URL 복사 완료!');
+  navigator.clipboard.writeText(buildOverlayUrl('main')).catch(()=>{});
+  showToast('OBS 메인 오버레이 URL 복사 완료!');
+}
+
+function copyObsUrl() {
+  navigator.clipboard.writeText(buildOverlayUrl('main')).catch(()=>{});
+  showToast('OBS URL 복사 완료! 브라우저 소스에 붙여넣으세요');
+}
+
+function copyFaceObsUrl() {
+  navigator.clipboard.writeText(buildOverlayUrl('face')).catch(()=>{});
+  showToast('얼굴 인식 오버레이 URL 복사 완료! (음식/면 먹기 게임용)');
+}
+
+function saveWsUrl() {
+  const url = document.getElementById('ss-ws-url')?.value?.trim();
+  if (!url) return;
+  WS.setUrl(url);
+  WS.connect();
+  showToast('서버 주소 저장 및 연결 시도 중...');
+}
+
+function testWsConnection() {
+  if (WS.isConnected()) {
+    showToast('✅ 서버에 정상 연결되어 있습니다!');
+  } else {
+    WS.connect();
+    showToast('🔄 서버 연결 시도 중...');
+  }
+}
+
+function connectChat() {
+  const platform = document.getElementById('ss-chat-platform')?.value;
+  const channel = document.getElementById('ss-chat-channel')?.value?.trim();
+  if (!channel) { showToast('채널명을 입력하세요'); return; }
+  if (!WS.isConnected()) {
+    showToast('서버 연결 후 채팅 연동이 가능합니다');
+    WS.connect();
+    return;
+  }
+  WS.send({ type: 'CHAT_JOIN', payload: { platform, channel } });
+  document.getElementById('chat-status').textContent = `${platform} #${channel} 연결 중...`;
+}
+
+function disconnectChat() {
+  WS.send({ type: 'CHAT_LEAVE' });
+  showToast('채팅 연결 해제');
 }
 async function saveStreamerSettings() {
   if(!AppState.isLoggedIn()) {
@@ -5226,7 +5473,7 @@ async function bootApp() {
   try {
     if(supa) {
       const u = await sbLoadUser();
-      if(u) { window._loggedIn = true; applyUserToUI(); }
+      if(u) { window._loggedIn = true; applyUserToUI(); initWS(); }
     }
   } catch(e) { console.warn('세션 복원 실패', e); }
 
