@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/generate-supabase-config.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/generate-supabase-config.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

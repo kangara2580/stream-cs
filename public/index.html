@@ -2148,7 +2148,10 @@ input[type=range]::-webkit-slider-thumb{
 ============================================================ */
 const SUPA_URL = window.STREAMCS_SUPABASE?.url || 'https://YOUR-PROJECT.supabase.co';
 const SUPA_KEY = window.STREAMCS_SUPABASE?.anonKey || 'YOUR-ANON-PUBLIC-KEY';
-const SUPA_CONFIGURED = SUPA_URL.indexOf('YOUR-PROJECT') === -1 && SUPA_KEY.indexOf('YOUR-ANON') === -1;
+const SUPA_CONFIGURED =
+  SUPA_URL.includes('.supabase.co') &&
+  SUPA_KEY.indexOf('YOUR-ANON') === -1 &&
+  SUPA_KEY.length > 20;
 
 let supa = null;
 try {

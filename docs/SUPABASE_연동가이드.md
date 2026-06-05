@@ -55,6 +55,21 @@ window.STREAMCS_SUPABASE = {
 
 ---
 
+## 4-1단계 — Vercel (stream-kit) Supabase 연결
+
+로컬 `supabase-config.js`는 Git/Vercel에 올라가지 않습니다. 대신 **Vercel 환경 변수**를 씁니다.
+
+| Name | Value |
+|------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` (**/rest/v1 없이**) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon public 또는 publishable 키 |
+
+[Vercel stream-kit Settings → Environment Variables](https://vercel.com/kingah2580-1314s-projects/stream-kit/settings/environment-variables) 에 Production / Preview / Development 모두 추가 후 재배포하세요.
+
+빌드 시 `scripts/generate-supabase-config.mjs`가 `public/supabase-config.js`를 자동 생성합니다.
+
+---
+
 ## 5단계 — 카카오 / 구글 소셜 로그인 켜기 (선택)
 
 1. Supabase → **Authentication** → **Providers**
