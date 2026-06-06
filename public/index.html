@@ -30,10 +30,29 @@ h1,h2,h3,.jua{font-family:'Jua',sans-serif;}
 .ic svg{width:100%;height:100%;}
 
 /* ===== ROUTER ===== */
-.page{display:none;min-height:100vh;}
-.page.active{display:block;}
-#page-auth.active{display:flex;}
-#page-dashboard.active{display:flex;}
+.page{
+  display:none !important;
+  min-height:100vh;
+  visibility:hidden;
+  pointer-events:none;
+  position:fixed;
+  inset:0;
+  overflow:hidden;
+  opacity:0;
+  z-index:-1;
+}
+.page.active{
+  display:block !important;
+  visibility:visible;
+  pointer-events:auto;
+  position:relative;
+  inset:auto;
+  overflow:visible;
+  opacity:1;
+  z-index:1;
+}
+#page-auth.active{display:flex !important;}
+#page-dashboard.active{display:flex !important;}
 
 /* ===== GLOBAL NAV ===== */
 #gnav{
@@ -267,7 +286,8 @@ select.csel-hidden{position:absolute;width:1px;height:1px;opacity:0;pointer-even
 @keyframes jellyFloat2{0%,100%{transform:translateY(0) rotate(6deg)}50%{transform:translateY(-10px) rotate(-6deg)}}
 @keyframes jellyFloat3{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.05)}}
 @keyframes jellyFloat4{0%,100%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(-14px) rotate(8deg)}}
-.hero-jellies{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+.hero-jellies{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;}
+.hero-pill,.hero h1,.hero-sub,.hero-actions,.hero-url-bar{position:relative;z-index:2;}
 .jelly{position:absolute;opacity:0;}
 .jelly-1{left:3%;top:18%;animation:heroJellyUp .7s .15s ease both,jellyFloat 4.5s 0.9s ease-in-out infinite;}
 .jelly-2{left:7%;top:52%;animation:heroJellyUp .7s .30s ease both,jellyFloat2 5s 1s ease-in-out infinite;}
@@ -283,8 +303,8 @@ select.csel-hidden{position:absolute;width:1px;height:1px;opacity:0;pointer-even
 .stats-bar{background:var(--Y);display:flex;flex-wrap:wrap;}
 .stats-bar-item{flex:1;min-width:130px;padding:24px 32px;text-align:center;border-right:2px solid rgba(0,0,0,0.1);}
 .stats-bar-item:last-child{border-right:none;}
-.stats-bar-num{font-family:'Jua',sans-serif;font-size:38px;color:var(--BK);}
-.stats-bar-label{font-size:12px;font-weight:700;color:rgba(0,0,0,0.55);margin-top:2px;}
+.stats-bar-num{font-family:'Jua',sans-serif;font-size:38px;line-height:1.1;color:var(--BK);}
+.stats-bar-label{font-size:12px;font-weight:700;line-height:1.5;color:rgba(0,0,0,0.55);margin-top:6px;}
 
 /* SECTION COMMON */
 .sec{padding:80px 32px;max-width:1100px;margin:0 auto;text-align:center;}
@@ -548,6 +568,16 @@ input[type=range]::-webkit-slider-thumb{
 }
 .db-av-name{font-size:14px;font-weight:700;}
 .db-av-plan{font-size:11px;color:var(--Y);}
+.db-logout{
+  margin:0 12px 16px;padding:10px 14px;width:calc(100% - 24px);
+  background:transparent;border:1px solid rgba(255,255,255,0.14);
+  border-radius:var(--r1);color:rgba(255,255,255,0.55);
+  font-size:13px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;
+  transition:all .2s;
+}
+.db-logout:hover{background:rgba(255,255,255,0.06);color:var(--WH);border-color:rgba(255,255,255,0.25);}
+.gnav-logout{color:rgba(255,255,255,0.55) !important;}
+.gnav-logout:hover{color:var(--Y) !important;}
 
 .db-main{flex:1;overflow-y:auto;min-height:100vh;}
 .db-topbar{
@@ -902,6 +932,7 @@ input[type=range]::-webkit-slider-thumb{
     <button class="gnav-link" onclick="scrollSec('vp')">서비스</button>
     <button class="gnav-link" onclick="goPage('games')">게임</button>
     <button class="gnav-link" onclick="scrollSec('pricing')">요금제</button>
+    <button class="gnav-link gnav-logout" id="gnav-logout" style="display:none" onclick="logout()">로그아웃</button>
     <button class="gnav-cta" onclick="goAuth('signup')">시작하기</button>
   </div>
 </nav>
@@ -1038,8 +1069,8 @@ input[type=range]::-webkit-slider-thumb{
   <!-- VALUE PROPS -->
   <section class="sec" id="vp">
     <p class="sec-tag">왜 StreamCS인가</p>
-    <h2 class="sec-title">스트리머의 3가지 진짜 문제<br>한 번에 해결한다</h2>
-    <p class="sec-desc">컨텐츠 걱정 없이, 시청자와 함께 만들어가는 살아있는 방송.</p>
+    <h2 class="sec-title">스트리머의 3가지 진짜 문제<br>한 번에 해결합니다</h2>
+    <p class="sec-desc">컨텐츠 걱정 없이, 시청자와 함께 만들어 가는 살아 있는 방송입니다.</p>
     <div class="vp-grid">
       <div class="vp-card">
         <div class="vp-icon vp-icon-y">
@@ -1053,8 +1084,8 @@ input[type=range]::-webkit-slider-thumb{
             <circle cx="21" cy="11" r="2" fill="#1A1A1A" stroke="#FFD600" stroke-width="1.5"/>
           </svg>
         </div>
-        <div class="vp-title">컨텐츠 고갈? 이제 없다</div>
-        <p class="vp-desc">사다리타기, 폭탄 룰렛, 구슬 게임, 면 먹기, 파리잡기 등 12가지 이상 미니게임이 대기 중. 버튼 하나로 즉시 방송 화면에 올린다.</p>
+        <div class="vp-title">컨텐츠 고갈? 이제 없습니다</div>
+        <p class="vp-desc">사다리타기, 폭탄 룰렛, 구슬 게임, 면 먹기, 파리잡기 등 12가지 이상 미니게임이 대기 중입니다. 버튼 하나로 즉시 방송 화면에 올릴 수 있습니다.</p>
         <span class="badge badge-Y vp-badge">12+ 게임</span>
       </div>
       <div class="vp-card">
@@ -1067,8 +1098,8 @@ input[type=range]::-webkit-slider-thumb{
             <circle cx="14" cy="17" r="1" fill="#2E7D32"/>
           </svg>
         </div>
-        <div class="vp-title">시청자가 직접 뛰어든다</div>
-        <p class="vp-desc">참여 링크 하나로 시청자가 게임에 참여. 채팅 명령어 연동, 실시간 순위, 도네이션 미션까지 — 보는 방송이 아닌 함께 만드는 방송이 된다.</p>
+        <div class="vp-title">시청자가 직접 뛰어듭니다</div>
+        <p class="vp-desc">참여 링크 하나로 시청자가 게임에 참여합니다. 채팅 명령어 연동, 실시간 순위, 도네이션 미션까지 — 보는 방송이 아닌 함께 만드는 방송이 됩니다.</p>
         <span class="badge badge-G vp-badge">실시간 참여</span>
       </div>
       <div class="vp-card">
@@ -1082,8 +1113,8 @@ input[type=range]::-webkit-slider-thumb{
             <circle cx="25" cy="16" r="2" fill="#E3F2FD"/>
           </svg>
         </div>
-        <div class="vp-title">자연스럽게 후원이 터진다</div>
-        <p class="vp-desc">게임 벌칙 = 후원 미션. 폭탄 당첨, 꼴찌 벌칙, 369 틀리기 등 게임 결과와 후원이 자연스럽게 연결. 시청자와 자연스러운 방송 흐름을 만들 수 있습니다.</p>
+        <div class="vp-title">자연스럽게 후원이 터집니다</div>
+        <p class="vp-desc">게임 벌칙 = 후원 미션. 폭탄 당첨, 꼴찌 벌칙, 369 틀리기 등 게임 결과와 후원이 자연스럽게 연결됩니다. 시청자와 자연스러운 방송 흐름을 만들 수 있습니다.</p>
         <span class="badge badge-B vp-badge">자연스러운 후원 유도</span>
       </div>
     </div>
@@ -1426,6 +1457,7 @@ input[type=range]::-webkit-slider-thumb{
         <div class="db-av-plan" id="db-uplan">미구독</div>
       </div>
     </div>
+    <button type="button" class="db-logout" onclick="logout()">로그아웃</button>
   </aside>
 
   <!-- MAIN -->
@@ -1730,6 +1762,7 @@ input[type=range]::-webkit-slider-thumb{
             <div class="info-row"><span class="info-lbl">가입일</span><span class="info-val" id="mp-joindate">-</span></div>
             <div class="info-row"><span class="info-lbl">로그인 방식</span><span class="info-val" id="mp-login-method">-</span></div>
             <button class="btn btn-line btn-sm" style="margin-top:16px" onclick="showToast('프로필 수정 기능 준비 중')">프로필 수정</button>
+            <button class="btn btn-danger btn-sm" style="margin-top:10px;width:100%;justify-content:center" onclick="logout()">로그아웃</button>
           </div>
           <div class="mypage-card">
             <div class="mypage-card-title">
@@ -1776,7 +1809,8 @@ input[type=range]::-webkit-slider-thumb{
           </div>
           <div class="setting-section">
             <div class="setting-section-title">계정 관리</div>
-            <div class="setting-row"><div class="setting-row-left"><div class="setting-row-label">연결된 소셜 계정</div><div class="setting-row-desc">카카오 · 연결됨</div></div><button class="btn btn-line btn-sm" onclick="showToast('구글 계정 추가 연결')">추가 연결</button></div>
+            <div class="setting-row"><div class="setting-row-left"><div class="setting-row-label">연결된 소셜 계정</div><div class="setting-row-desc" id="settings-social-desc">이메일 · 연결됨</div></div><button class="btn btn-line btn-sm" onclick="showToast('소셜 계정 추가 연결 준비 중')">추가 연결</button></div>
+            <div class="setting-row"><div class="setting-row-left"><div class="setting-row-label">로그아웃</div><div class="setting-row-desc">현재 기기에서 로그아웃합니다</div></div><button class="btn btn-line btn-sm" onclick="logout()">로그아웃</button></div>
             <div class="setting-row"><div class="setting-row-left"><div class="setting-row-label">계정 탈퇴</div><div class="setting-row-desc">모든 데이터가 삭제됩니다</div></div><button class="btn btn-danger btn-sm" onclick="showToast('탈퇴 전 고객센터에 문의해주세요')">탈퇴하기</button></div>
           </div>
         </div>
@@ -2194,7 +2228,14 @@ const SUPA_CONFIGURED =
 let supa = null;
 try {
   if (window.supabase && SUPA_CONFIGURED) {
-    supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    supa = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage,
+      },
+    });
   }
 } catch(e) { console.warn('Supabase 초기화 실패', e); }
 
@@ -2419,30 +2460,56 @@ async function sbLogin(email, pw) {
 }
 async function sbSocialLogin(provider) {
   if(!supa) return { mock:true };
-  const { data, error } = await supa.auth.signInWithOAuth({ provider }); // 'kakao' | 'google'
+  // hash(#) 넣으면 Supabase Redirect URLs 매칭 실패 → 구글 화면 자체가 안 뜰 수 있음
+  const redirectTo = window.location.origin + (window.location.pathname || '/');
+  const { data, error } = await supa.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo },
+  });
   if(error) throw error;
+  if(!data?.url) throw new Error('OAuth URL을 받지 못했습니다. Supabase Google 설정을 확인하세요.');
+  window.location.href = data.url;
   return data;
 }
 async function sbLogout() {
-  if(supa) await supa.auth.signOut();
+  if(supa) await supa.auth.signOut({ scope: 'global' });
   AppState.user = null;
 }
 /* 어디서든 호출 가능한 로그아웃 (데모/실제 모드 모두 대응) */
 async function logout() {
+  if(!confirm('로그아웃 하시겠어요?')) return;
   try { await sbLogout(); } catch(e) { console.warn('로그아웃 오류', e); }
+  try { if(typeof WS !== 'undefined' && WS.disconnect) WS.disconnect(); } catch(e) {}
   AppState.user = null;
   window._loggedIn = false;
+  _hadUser = false;
+  try { sessionStorage.removeItem('streamcs_last_hash'); } catch(e) {}
+  const set = (id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  set('db-uname', '게스트');
+  set('db-av-txt', '?');
+  set('db-uplan', '미구독');
+  set('mp-name', '-');
+  set('mp-email', '-');
+  set('mp-av', '?');
+  updateNavAuthButton();
   currentDbTab = 'overview';
   showToast('로그아웃 되었어요');
-  // 데모 모드에서는 SIGNED_OUT 이벤트가 없으므로 직접 랜딩으로
   history.replaceState({page:'landing'}, '', '#landing');
   _renderPage('landing', true);
 }
-/* 현재 로그인 유저 + 구독정보 불러오기 */
-async function sbLoadUser() {
+/* 현재 로그인 유저 + 구독정보 불러오기 (세션 user 우선 — 새로고침 복원 안정) */
+async function sbLoadUser(fromUser) {
   if(!supa) return null;
-  const { data:{ user }, error: uErr } = await supa.auth.getUser();
-  if(uErr || !user) return null;
+  let user = fromUser || null;
+  if(!user) {
+    const { data: { session } } = await supa.auth.getSession();
+    user = session?.user || null;
+  }
+  if(!user) {
+    const { data: { user: u }, error: uErr } = await supa.auth.getUser();
+    if(uErr || !u) return null;
+    user = u;
+  }
   // .single()은 행이 없으면 throw → maybeSingle()로 안전하게
   let profile = null;
   try {
@@ -2542,67 +2609,116 @@ async function sbLoadOverlaySettings() {
   return data;
 }
 let _bootDone = false;
-let _hadUser = false;   // 이전에 로그인 상태였는지 (중복 SIGNED_IN 구분용)
-let _sessionLoaded = false; // 이미 한 번 사용자 로드를 끝냈는지
+let _hadUser = false;
+let _authRestorePromise = null;
 
-// 세션이 있으면 사용자 정보를 확실히 로드한다 (중복 호출 안전)
-async function ensureUserLoaded() {
-  if(_sessionLoaded) return AppState.user;
+function persistRouteHash() {
   try {
-    if(supa) {
-      const { data: { session } } = await supa.auth.getSession();
-      if(session && session.user) {
-        const u = await sbLoadUser();
-        if(u) { window._loggedIn = true; _hadUser = true; }
-      }
-    }
-  } catch(e) { console.warn('세션 복원 실패', e); }
-  _sessionLoaded = true;
-  return AppState.user;
+    if(location.hash) sessionStorage.setItem('streamcs_last_hash', location.hash);
+  } catch(e) {}
+}
+
+function getRouteHash() {
+  // URL 해시만 사용 — 로그인 상태여도 첫 접속(/)은 랜딩
+  return (location.hash || '').replace(/^#/, '').trim();
+}
+
+/** OAuth 실패 시 URL의 ?error=... 파라미터 처리 (Supabase → 앱 리다이렉트) */
+function handleOAuthCallbackError() {
+  const params = new URLSearchParams(location.search);
+  const err = params.get('error');
+  if(!err) return false;
+
+  const desc = decodeURIComponent(params.get('error_description') || '');
+  console.error('[StreamCS] OAuth 오류:', err, desc);
+
+  let msg = '소셜 로그인에 실패했어요.';
+  if(desc.includes('Unable to exchange external code')) {
+    msg = '구글 Client Secret이 잘못됐어요. Supabase Google 설정에서 Secret을 다시 붙여넣으세요.';
+  } else if(err === 'access_denied') {
+    msg = '구글 로그인이 취소됐어요.';
+  } else if(desc) {
+    msg = '로그인 오류: ' + desc.slice(0, 120);
+  }
+
+  showToast(msg);
+
+  // URL에서 오류 파라미터 제거 (깔끔한 주소 유지)
+  const hash = location.hash || '#landing';
+  history.replaceState({page:'landing'}, '', location.pathname + hash);
+  return true;
+}
+
+async function restoreSession(options = {}) {
+  if(!supa) return null;
+  if(location.hash.includes('access_token') || location.search.includes('code=')) {
+    await new Promise(r => setTimeout(r, 150));
+  }
+  const { data: { session } } = await supa.auth.getSession();
+  if(!session?.user) return null;
+  const u = await sbLoadUser(session.user);
+  if(u) {
+    window._loggedIn = true;
+    _hadUser = true;
+    if(options.applyUI !== false) applyUserToUI();
+    try { initWS(); } catch(e) {}
+  }
+  return u;
+}
+
+async function ensureUserLoaded() {
+  if(!_authRestorePromise) {
+    _authRestorePromise = restoreSession({ applyUI: false }).catch(e => {
+      console.warn('세션 복원 실패', e);
+      return null;
+    });
+  }
+  return _authRestorePromise;
 }
 
 function initSupabaseAuthListener() {
   if(!supa) return;
   supa.auth.onAuthStateChange(async (event, session) => {
     if(session?.user) {
-      // TOKEN_REFRESHED: 토큰 자동 갱신 — 페이지 이동 없이 조용히 처리
       if(event === 'TOKEN_REFRESHED') {
         window._loggedIn = true;
         _hadUser = true;
         return;
       }
-      // INITIAL_SESSION: 새로고침/탭복원. 사용자 정보를 확실히 로드하되 페이지 이동은 하지 않는다.
       if(event === 'INITIAL_SESSION') {
-        await ensureUserLoaded();
-        window._loggedIn = true;
-        try { applyUserToUI(); } catch(e){}
+        if(!AppState.user) await restoreSession();
         return;
       }
-      // 여기부터는 SIGNED_IN / USER_UPDATED 등
       const wasLoggedIn = _hadUser;
-      await sbLoadUser();
-      _sessionLoaded = true;
+      await sbLoadUser(session.user);
       window._loggedIn = true;
       _hadUser = true;
       applyUserToUI();
-      // 진짜 새 로그인일 때만(이전에 로그인 상태가 아니었고, auth 페이지에 있을 때) 대시보드로 이동.
-      // 새로고침 시 Supabase가 SIGNED_IN을 한 번 더 쏘더라도 wasLoggedIn이 true라 무시됨.
       if(_bootDone && event === 'SIGNED_IN' && !wasLoggedIn && currentPage === 'auth') {
         if(!AppState.user?.id) return;
-        try { initWS(); } catch(e){}
         history.replaceState({page:'dashboard',tab:'overview'}, '', '#dashboard/overview');
+        persistRouteHash();
         currentDbTab = 'overview';
         _renderPage('dashboard', true);
       }
-    } else if(event === 'SIGNED_OUT') {
-      AppState.user = null;
-      window._loggedIn = false;
-      _hadUser = false;
-      _sessionLoaded = true;
-      if(_bootDone && (currentPage === 'dashboard' || currentPage === 'streamer-settings')) {
-        history.replaceState({page:'landing'}, '', '#landing');
-        _renderPage('landing', true);
-      }
+      return;
+    }
+    if(event !== 'SIGNED_OUT') return;
+    const { data: { session: still } } = await supa.auth.getSession();
+    if(still?.user) {
+      await sbLoadUser(still.user);
+      window._loggedIn = true;
+      _hadUser = true;
+      applyUserToUI();
+      return;
+    }
+    AppState.user = null;
+    window._loggedIn = false;
+    _hadUser = false;
+    updateNavAuthButton();
+    if(_bootDone && (currentPage === 'dashboard' || currentPage === 'streamer-settings')) {
+      history.replaceState({page:'landing'}, '', '#landing');
+      _renderPage('landing', true);
     }
   });
 }
@@ -2667,7 +2783,6 @@ const PAGES = ['landing','auth','dashboard','games','streamer-settings','support
 let currentPage = 'landing';
 
 function goPage(p) {
-  // 로그인 필요 페이지 가드
   const needLogin = ['dashboard','streamer-settings'];
   if(needLogin.includes(p) && !AppState.isLoggedIn()) {
     showToast('로그인이 필요해요!');
@@ -2676,14 +2791,14 @@ function goPage(p) {
     _renderPage('auth', true);
     return;
   }
-  // 대시보드는 현재 탭을 해시에 포함
   if(p === 'dashboard') {
     const tab = currentDbTab || 'overview';
     history.pushState({page:'dashboard', tab}, '', '#dashboard/' + tab);
   } else {
     history.pushState({page:p}, '', '#' + p);
   }
-  _renderPage(p, true);  // 앞으로 이동: 맨 위로
+  persistRouteHash();
+  _renderPage(p, true);
 }
 function _renderPage(p, doScroll) {
   // 뒤로가기 등으로 보호 페이지 직접 진입 시 차단
@@ -2693,9 +2808,15 @@ function _renderPage(p, doScroll) {
     p = 'auth';
   }
   currentPage = p;
-  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(el => {
+    el.classList.remove('active');
+    el.setAttribute('aria-hidden', 'true');
+  });
   const el = document.getElementById('page-' + p);
-  if(el) el.classList.add('active');
+  if(el) {
+    el.classList.add('active');
+    el.setAttribute('aria-hidden', 'false');
+  }
   if(doScroll) window.scrollTo(0,0);  // 앞으로 이동할 때만 맨 위로
   const hideNav = ['overlay','join'].includes(p);
   document.getElementById('gnav').style.display = hideNav ? 'none' : '';
@@ -2805,16 +2926,39 @@ function switchAuthTab(tab) {
 
 // 로그인 성공 공통 처리 (user 객체 기반)
 function loginAs(user) {
-  // 문자열로 넘어오면 데모용 객체로 변환 (하위 호환)
   if(typeof user === 'string') user = { name:user, email:user+'@streamcs.io', plan:null };
+  if(!user?.id) {
+    if(!supa) user = { ...user, id: 'demo-local' };
+    else {
+      showToast('로그인 정보를 불러오지 못했어요. 다시 시도해주세요.');
+      return;
+    }
+  }
   AppState.user = user;
-  window._loggedIn = true;  // 기존 코드 호환
+  window._loggedIn = true;
+  _hadUser = true;
   applyUserToUI();
   setTimeout(()=>goPage('dashboard'), 600);
 }
 
+function updateNavAuthButton() {
+  const cta = document.querySelector('.gnav-cta');
+  const logoutBtn = document.getElementById('gnav-logout');
+  if(!cta) return;
+  if(AppState.isLoggedIn()) {
+    cta.textContent = '마이페이지';
+    cta.onclick = () => { goPage('dashboard'); dbTab('mypage', null); };
+    if(logoutBtn) logoutBtn.style.display = '';
+  } else {
+    cta.textContent = '시작하기';
+    cta.onclick = () => goAuth('signup');
+    if(logoutBtn) logoutBtn.style.display = 'none';
+  }
+}
+
 // 사용자 정보를 화면에 반영 (이름, 아바타, 플랜 배지)
 function applyUserToUI() {
+  updateNavAuthButton();
   const u = AppState.user;
   if(!u) return;
   const name = (u.name && String(u.name).trim()) || (u.email ? u.email.split('@')[0] : '사용자');
@@ -2879,10 +3023,17 @@ function handleSocialLogin(provider) {
   (async () => {
     try {
       if(supa) {
-        await sbSocialLogin(provider);  // OAuth 리디렉트 발생
-        return; // 리디렉트되므로 이후 코드 실행 안 됨
+        await sbSocialLogin(provider);
+        return;
       }
-    } catch(e) { showToast('로그인 오류: '+e.message); btn.disabled=false; return; }
+    } catch(e) {
+      console.error('[StreamCS] 소셜 로그인 오류', e);
+      showToast('로그인 오류: ' + (e.message || 'Supabase Google 설정 확인'));
+      btn.disabled = false;
+      const span = btn.querySelector('span');
+      if(span) span.textContent = provider === 'kakao' ? '카카오로 계속하기' : 'Google로 계속하기';
+      return;
+    }
     // 데모 모드 (Supabase 미설정 시)
     setTimeout(() => {
       showToast(provider === 'kakao' ? '카카오 로그인 성공!' : 'Google 로그인 성공!');
@@ -2903,6 +3054,7 @@ function handleEmailLogin() {
       if(supa) {
         await sbLogin(email, pw);
         const u = await sbLoadUser();
+        if(!u) { showToast('로그인 정보를 불러오지 못했어요.'); return; }
         showToast('로그인 성공!');
         loginAs(u);
         return;
@@ -2930,10 +3082,18 @@ function handleSignup() {
   (async () => {
     try {
       if(supa) {
-        await sbSignUp(email, pw, name);
-        const u = await sbLoadUser() || { name, email, plan: null };
-        showToast('회원가입 완료! 환영합니다 🎉');
-        loginAs(u);
+        const data = await sbSignUp(email, pw, name);
+        if(data.session) {
+          const u = await sbLoadUser();
+          if(!u) { showToast('로그인 정보를 불러오지 못했어요. 로그인해주세요.'); switchAuthTab('login'); return; }
+          showToast('회원가입 완료! 환영합니다 🎉');
+          loginAs(u);
+          return;
+        }
+        showToast('가입 확인 메일을 보냈어요. 메일 확인 후 로그인해주세요 📧');
+        switchAuthTab('login');
+        const loginEmail = document.getElementById('login-email');
+        if(loginEmail) loginEmail.value = email;
         return;
       }
     } catch(e) { showToast('회원가입 실패: '+(e.message||'')); return; }
@@ -3193,16 +3353,21 @@ function renderLandingGames() {
 /* ===== GAME DETAIL PAGE ===== */
 function goGameDetail(id) {
   history.pushState({page:'game', gameId:id}, '', '#game/' + id);
-  _renderGameDetail(id, true);  // 앞으로 이동: 맨 위로
+  persistRouteHash();
+  _renderGameDetail(id, true);
 }
 function _renderGameDetail(id, doScroll) {
   currentPage = 'game';
   const g = getGame(id);
   if(!g) { goPage('games'); return; }
-  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(el => {
+    el.classList.remove('active');
+    el.setAttribute('aria-hidden', 'true');
+  });
   document.getElementById('gnav').style.display = '';
   const page = document.getElementById('page-game-detail');
   page.classList.add('active');
+  page.setAttribute('aria-hidden', 'false');
   if(doScroll) window.scrollTo(0,0);
 
   // 사다리 게임은 전용 렌더
@@ -5249,7 +5414,17 @@ const WS = (() => {
 
   function isConnected() { return _ws?.readyState === WebSocket.OPEN; }
 
-  return { connect, send, on, setUrl, isConnected };
+  function disconnect() {
+    clearTimeout(_reconnectTimer);
+    _reconnectTimer = null;
+    if (_ws) {
+      _ws.onclose = null;
+      _ws.close();
+      _ws = null;
+    }
+  }
+
+  return { connect, send, on, setUrl, isConnected, disconnect };
 })();
 
 // WS 메시지 처리
@@ -5557,39 +5732,51 @@ function closeModal(e, force) {
 
 /* ===== BOOT (모든 함수·데이터 정의 후 실행) ===== */
 async function bootApp() {
-  console.log('%c[StreamCS] 빌드 v24-FIX ✓ 세션 복원 레이스 제거', 'color:#FFD600;font-weight:bold;font-size:14px;');
+  console.log('%c[StreamCS] 빌드 v26-FIX ✓ 첫 접속=랜딩, 새로고침=현재 페이지 유지', 'color:#FFD600;font-weight:bold;font-size:14px;');
   try { renderGameGrid(ALL_GAMES); } catch(e){}
   try { renderLandingGames(); } catch(e){}
   if(isDemoMode()) {
     console.info('[StreamCS] 데모 모드 — public/supabase-config.js 에 Supabase 키를 넣으면 실제 저장됩니다.');
   }
-  // 1) Supabase 세션을 먼저 확실히 복원 (리스너보다 먼저 끝낸다 → INITIAL_SESSION 레이스 제거)
-  await ensureUserLoaded();
-  if(AppState.user) {
-    window._loggedIn = true;
-    applyUserToUI();
-    try { initWS(); } catch(e){}
-  }
 
-  // 2) 세션 복원이 끝난 뒤에 인증 상태 리스너 등록 (이후의 SIGNED_IN/OUT만 처리)
   initSupabaseAuthListener();
+  const oauthFailed = handleOAuthCallbackError();
+  await ensureUserLoaded();
+  if(AppState.user) applyUserToUI();
 
-  // 3) 해시를 해석해 해당 페이지로 복원 (이 시점엔 AppState.user가 확정돼 있음)
-  routeFromHash(location.hash.replace('#',''));
+  if(oauthFailed && !AppState.user) {
+    _renderPage('auth', true);
+    window._authTab = 'login';
+    if(typeof switchAuthTab === 'function') switchAuthTab('login');
+  } else if(AppState.isLoggedIn() && (!getRouteHash() || getRouteHash() === 'landing')) {
+    history.replaceState({page:'dashboard', tab:'overview'}, '', '#dashboard/overview');
+    currentDbTab = 'overview';
+    _renderPage('dashboard', true);
+  } else {
+    routeFromHash(getRouteHash());
+  }
   _bootDone = true;
-  // 모든 select를 예쁜 커스텀 드롭다운으로 업그레이드 + 이후 동적 생성분 자동 처리
   try { initCselObserver(); } catch(e) { console.warn('드롭다운 업그레이드 실패', e); }
 }
 
-/* 해시 문자열을 받아 알맞은 페이지/탭을 렌더 (새로고침·직접접속 복원용) */
 function routeFromHash(rawHash) {
   const hash = (rawHash || '').trim();
+
+  // OAuth 콜백 (#access_token=... 등) — 로그인 후 대시보드로
+  if(/access_token|refresh_token|provider_token|type=signup|type=recovery/.test(hash)) {
+    history.replaceState({page:'dashboard', tab:'overview'}, '', '#dashboard/overview');
+    persistRouteHash();
+    currentDbTab = 'overview';
+    _renderPage('dashboard', true);
+    return;
+  }
 
   // 게임 상세: #game/<id>
   if(hash.startsWith('game/')) {
     const gid = hash.split('/')[1];
     if(getGame(gid)) {
       history.replaceState({page:'game', gameId:gid}, '', '#game/'+gid);
+      persistRouteHash();
       _renderGameDetail(gid, true);
       return;
     }
@@ -5608,13 +5795,12 @@ function routeFromHash(rawHash) {
     const tab = parts[1] && DB_TABS.includes(parts[1]) ? parts[1] : 'overview';
     currentDbTab = tab;
     history.replaceState({page:'dashboard', tab}, '', '#dashboard/'+tab);
+    persistRouteHash();
     _renderPage('dashboard', true);
     return;
   }
 
-  // 일반 페이지
   if(PAGES.includes(hash)) {
-    // 보호 페이지 직접 접속 가드
     const needLogin = ['streamer-settings'];
     if(needLogin.includes(hash) && !AppState.isLoggedIn()) {
       window._authTab = 'login';
@@ -5623,11 +5809,12 @@ function routeFromHash(rawHash) {
       return;
     }
     history.replaceState({page:hash}, '', '#'+hash);
+    persistRouteHash();
     _renderPage(hash, true);
     return;
   }
 
-  // 그 외 → 랜딩
+  // 해시 없음 → 항상 메인(랜딩). 로그인 여부와 무관 (마이페이지는 상단 버튼으로)
   history.replaceState({page:'landing'}, '', '#landing');
   _renderPage('landing', true);
 }

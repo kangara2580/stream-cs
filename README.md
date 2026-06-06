@@ -39,12 +39,19 @@ npm run dev
 npm run ws:install   # 최초 1회
 cp ws-server/.env.example ws-server/.env   # SUPABASE_SERVICE_KEY 등 입력
 
-# 터미널 1 — 대시보드
+# 터미널 1 — 대시보드 (브라우저 자동 오픈 → localhost:3000)
+cd /Users/gang-ahra/stream-cs
 npm run dev
 
-# 터미널 2 — WebSocket 서버
+# 3000 포트가 꼬였을 때
+npm run dev:fresh
+
+# 터미널 2 — WebSocket 서버 (localhost:3001)
 npm run ws:dev
 ```
+
+> **중요:** `npm run dev`는 반드시 **`stream-cs` 폴더**에서 실행하세요.  
+> 홈(`~`)에서 실행하면 `Missing script` 오류가 납니다.
 
 **OBS 브라우저 소스 URL (로컬):**
 

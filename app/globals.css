@@ -1,22 +1,34 @@
-:root {
-  --brand: #ffd600;
-  --bg: #fffef8;
-  --text: #1a1a1a;
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #ffd600;
+  --color-brand-light: #fffde7;
+  --color-brand-dark: #f9a825;
+  --color-ink: #1a1a1a;
+  --color-muted: #666666;
+  --color-surface: #f5f5f5;
+  --font-jua: "Jua", sans-serif;
+  --font-sans: "Noto Sans KR", sans-serif;
+  --radius-card: 20px;
+  --shadow-brand: 0 4px 20px rgba(255, 214, 0, 0.3);
 }
 
 * {
   box-sizing: border-box;
 }
 
-html,
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   min-height: 100%;
-  font-family: "Noto Sans KR", system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  font-family: var(--font-sans);
+  background: #ffffff;
+  color: var(--color-ink);
 }
 
-a {
-  color: inherit;
+.font-jua {
+  font-family: var(--font-jua);
 }
