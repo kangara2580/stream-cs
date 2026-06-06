@@ -933,7 +933,7 @@ input[type=range]::-webkit-slider-thumb{
     <button class="gnav-link" onclick="goPage('games')">게임</button>
     <button class="gnav-link" onclick="scrollSec('pricing')">요금제</button>
     <button class="gnav-link gnav-logout" id="gnav-logout" style="display:none" onclick="logout()">로그아웃</button>
-    <button class="gnav-cta" onclick="goAuth('signup')">시작하기</button>
+    <button class="gnav-cta" onclick="goAuth('login')">시작하기</button>
   </div>
 </nav>
 
@@ -1047,7 +1047,7 @@ input[type=range]::-webkit-slider-thumb{
     </p>
 
     <div class="hero-actions">
-      <button class="btn btn-BK btn-lg" onclick="goAuth('signup')">시작하기</button>
+      <button class="btn btn-BK btn-lg" onclick="goAuth('login')">시작하기</button>
       <button class="btn btn-line btn-lg" onclick="goPage('games')">게임 전체 보기</button>
     </div>
 
@@ -2951,7 +2951,7 @@ function updateNavAuthButton() {
     if(logoutBtn) logoutBtn.style.display = '';
   } else {
     cta.textContent = '시작하기';
-    cta.onclick = () => goAuth('signup');
+    cta.onclick = () => goAuth('login');
     if(logoutBtn) logoutBtn.style.display = 'none';
   }
 }
