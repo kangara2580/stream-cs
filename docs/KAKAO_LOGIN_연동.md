@@ -18,9 +18,10 @@ Supabase `signInWithOAuth({ provider: 'kakao' })`는 서버에서 **항상 `acco
 
 ### 필수 설정
 
-1. **카카오 로그인** → 상태 **ON**
-2. **OpenID Connect** → 상태 **ON**  
-   https://developers.kakao.com/console/app/1481229/product/login/oidc
+1. **카카오 로그인 → 일반** 페이지에서 설정  
+   https://developers.kakao.com/console/app/1481229/product/login/general  
+   - **사용 설정** → 상태 **ON**  
+   - 아래 **OpenID Connect** → 상태 **ON** (별도 `/oidc` 메뉴 없음, 같은 페이지)
 3. **동의항목** — 닉네임(필수), 프로필 사진 설정  
    https://developers.kakao.com/console/app/1481229/product/login/scope  
    (`account_email`은 **설정하지 않아도 됨**)
@@ -47,8 +48,12 @@ https://supabase.com/dashboard/project/zvipxncqreyvnmjqjbqf/auth/providers?provi
 
 | 변수 | 값 |
 |------|-----|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://zvipxncqreyvnmjqjbqf.supabase.co` (**/rest/v1 없이**) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase publishable/anon 키 |
 | `KAKAO_REST_API_KEY` | 카카오 REST API 키 |
 | `KAKAO_CLIENT_SECRET` | 카카오 로그인 Client Secret |
+
+> URL에 `/rest/v1`이 붙으면 `Invalid path specified in request URL` 오류가 납니다.
 
 로컬: `.env.local`에 동일하게 추가 후 `npm run dev`
 

@@ -1,11 +1,12 @@
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import {
   exchangeKakaoCodeForIdToken,
   getAppOrigin,
   getKakaoRedirectUri,
 } from "@/lib/kakao-auth";
+import { getSupabaseEnv } from "@/lib/supabase/config";
 
 function redirectWithError(request: NextRequest, code: string) {
   const origin = getAppOrigin(request);
@@ -43,10 +44,28 @@ export async function GET(request: NextRequest) {
     return redirectWithError(request, tokenResult.error);
   }
 
-  const supabase = await createClient();
-  if (!supabase) {
+  const { url: supabaseUrl, key: supabaseKey } = getSupabaseEnv();
+  if (!supabaseUrl || !supabaseKey) {
     return redirectWithError(request, "supabase_not_configured");
   }
+
+  const origin = getAppOrigin(request);
+  let response = NextResponse.redirect(`${origin}/#dashboard/overview`);
+
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = NextResponse.redirect(`${origin}/#dashboard/overview`);
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        );
+      },
+    },
+  });
 
   const { error: signInError } = await supabase.auth.signInWithIdToken({
     provider: "kakao",
@@ -58,6 +77,5 @@ export async function GET(request: NextRequest) {
     return redirectWithError(request, signInError.message);
   }
 
-  const origin = getAppOrigin(request);
-  return NextResponse.redirect(`${origin}/#dashboard/overview`);
+  return response;
 }
