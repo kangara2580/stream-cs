@@ -2487,16 +2487,17 @@ async function sbLogin(email, pw) {
 }
 async function sbSocialLogin(provider) {
   if(!supa) return { mock:true };
+  // KOE205: Supabase signInWithOAuth(kakao)는 account_email을 항상 요청 → 비즈앱 없으면 카카오 거부
+  // OIDC 직접 연동(/api/auth/kakao)으로 nickname·프로필만 요청
+  if(provider === 'kakao') {
+    window.location.href = '/api/auth/kakao';
+    return { redirecting: true };
+  }
   // hash(#) 넣으면 Supabase Redirect URLs 매칭 실패 → 구글 화면 자체가 안 뜰 수 있음
   const redirectTo = window.location.origin + (window.location.pathname || '/');
-  const options = { redirectTo };
-  // KOE205: Supabase 기본 scope에 account_email 포함 → 비즈앱 없으면 카카오 거부
-  if(provider === 'kakao') {
-    options.scopes = 'profile_nickname profile_image';
-  }
   const { data, error } = await supa.auth.signInWithOAuth({
     provider,
-    options,
+    options: { redirectTo },
   });
   if(error) throw error;
   if(!data?.url) throw new Error('OAuth URL을 받지 못했습니다. Supabase Google 설정을 확인하세요.');
@@ -2655,17 +2656,28 @@ function getRouteHash() {
   return (location.hash || '').replace(/^#/, '').trim();
 }
 
-/** OAuth 실패 시 URL의 ?error=... 파라미터 처리 (Supabase → 앱 리다이렉트) */
+/** OAuth 실패 시 URL의 ?error=... / ?kakao_error=... 파라미터 처리 */
 function handleOAuthCallbackError() {
   const params = new URLSearchParams(location.search);
+  const kakaoErr = params.get('kakao_error');
   const err = params.get('error');
-  if(!err) return false;
+  if(!kakaoErr && !err) return false;
 
   const desc = decodeURIComponent(params.get('error_description') || '');
-  console.error('[StreamCS] OAuth 오류:', err, desc);
+  console.error('[StreamCS] OAuth 오류:', kakaoErr || err, desc);
 
   let msg = '소셜 로그인에 실패했어요.';
-  if(desc.includes('Unable to exchange external code')) {
+  if(kakaoErr) {
+    if(kakaoErr === 'kakao_not_configured') {
+      msg = '카카오 서버 키가 없어요. Vercel에 KAKAO_REST_API_KEY, KAKAO_CLIENT_SECRET을 추가하세요.';
+    } else if(kakaoErr.includes('KOE205') || kakaoErr.includes('account_email')) {
+      msg = '카카오 동의항목 오류(KOE205). OpenID Connect를 켜고 Redirect URI를 등록했는지 확인하세요.';
+    } else if(kakaoErr === 'access_denied') {
+      msg = '카카오 로그인이 취소됐어요.';
+    } else {
+      msg = '카카오 로그인 오류: ' + kakaoErr.slice(0, 120);
+    }
+  } else if(desc.includes('Unable to exchange external code')) {
     msg = '구글 Client Secret이 잘못됐어요. Supabase Google 설정에서 Secret을 다시 붙여넣으세요.';
   } else if(err === 'access_denied') {
     msg = '구글 로그인이 취소됐어요.';
@@ -2676,8 +2688,8 @@ function handleOAuthCallbackError() {
   showToast(msg);
 
   // URL에서 오류 파라미터 제거 (깔끔한 주소 유지)
-  const hash = location.hash || '#landing';
-  history.replaceState({page:'landing'}, '', location.pathname + hash);
+  const hash = location.hash || '#auth';
+  history.replaceState({page:'auth'}, '', location.pathname + hash);
   return true;
 }
 
