@@ -2489,9 +2489,14 @@ async function sbSocialLogin(provider) {
   if(!supa) return { mock:true };
   // hash(#) 넣으면 Supabase Redirect URLs 매칭 실패 → 구글 화면 자체가 안 뜰 수 있음
   const redirectTo = window.location.origin + (window.location.pathname || '/');
+  const options = { redirectTo };
+  // KOE205: Supabase 기본 scope에 account_email 포함 → 비즈앱 없으면 카카오 거부
+  if(provider === 'kakao') {
+    options.scopes = 'profile_nickname profile_image';
+  }
   const { data, error } = await supa.auth.signInWithOAuth({
     provider,
-    options: { redirectTo },
+    options,
   });
   if(error) throw error;
   if(!data?.url) throw new Error('OAuth URL을 받지 못했습니다. Supabase Google 설정을 확인하세요.');
