@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
 
   const cookieStore = await cookies();
   const savedState = cookieStore.get("kakao_oauth_state")?.value;
+  const savedNonce = cookieStore.get("kakao_oauth_nonce")?.value;
   cookieStore.delete("kakao_oauth_state");
   cookieStore.delete("kakao_oauth_nonce");
 
@@ -70,6 +71,7 @@ export async function GET(request: NextRequest) {
   const { error: signInError } = await supabase.auth.signInWithIdToken({
     provider: "kakao",
     token: tokenResult.idToken,
+    nonce: savedNonce,
   });
 
   if (signInError) {
